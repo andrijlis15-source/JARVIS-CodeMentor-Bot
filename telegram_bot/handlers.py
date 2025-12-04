@@ -116,7 +116,7 @@ async def cmd_start_single_step_action(message: Message, state: FSMContext):
         await state.set_state(JarvisStates.waiting_for_explain_code)
         instruction = "Надішліть код, який потрібно пояснити (Deconstruct Logic)."
                    
-    await message.answer(f"💡 {instruction}")
+    await message.answer(f" {instruction}")
 
 
 @router.message(F.state.in_([JarvisStates.waiting_for_review_code, JarvisStates.waiting_for_explain_code]))
