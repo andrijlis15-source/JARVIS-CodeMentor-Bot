@@ -135,7 +135,7 @@ async def process_single_step_code(message: Message, state: FSMContext):
 @router.callback_query(F.data == "cancel_action")
 async def cb_cancel_action(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("❌ Дія скасована. Оберіть тип завдання.", reply_markup=DIFFICULTY_CHOICE) # Повертаємось до вибору складності
+    await callback.message.edit_text(" Дія скасована. Оберіть тип завдання.", reply_markup=DIFFICULTY_CHOICE) # Повертаємось до вибору складності
     await callback.answer()
 
 @router.callback_query(F.data.startswith("confirm_"))
@@ -149,7 +149,7 @@ async def cb_confirm_action(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return await callback.answer()
         
-    await callback.message.edit_text(f"⏳ {action.upper()} розпочато. Аналізую...")
+    await callback.message.edit_text(f" {action.upper()} розпочато. Аналізую...")
     await callback.answer()
     
     # Створення промпту для Gemini
@@ -159,6 +159,6 @@ async def cb_confirm_action(callback: CallbackQuery, state: FSMContext):
         prompt = f"Поясни наступний код простою та зрозумілою українською мовою, розбираючи логіку покроково. Код:\n\n```\n{code}\n```"
     
     ai_response = await generate_response(prompt)
-    await callback.message.edit_text(f"✅ Результат {action.upper()}:\n\n{ai_response}", reply_markup=DIFFICULTY_CHOICE) # Повертаємось до вибору складності
+    await callback.message.edit_text(f" Результат {action.upper()}:\n\n{ai_response}", reply_markup=DIFFICULTY_CHOICE) # Повертаємось до вибору складності
     
     await state.clear()
