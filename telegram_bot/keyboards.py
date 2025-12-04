@@ -1,4 +1,3 @@
-# telegram_bot/keyboards.py
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 # --- 1. NEW: Initial Difficulty Choice Keyboard (Початковий вибір) ---
@@ -35,8 +34,8 @@ def get_confirm_keyboard(action: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Підтвердити", callback_data=f"confirm_{action}"),
-                InlineKeyboardButton(text="❌ Скасувати", callback_data="cancel_action")
+                InlineKeyboardButton(text=" Підтвердити", callback_data=f"confirm_{action}"),
+                InlineKeyboardButton(text=" Скасувати", callback_data="cancel_action")
             ]
         ]
     )
