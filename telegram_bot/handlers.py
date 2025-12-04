@@ -1,4 +1,4 @@
-# telegram_bot/handlers.py
+
 import asyncio
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
@@ -28,9 +28,9 @@ async def generate_response(prompt: str) -> str:
         return response.text
     except APIError as e:
         print(f"Gemini API Error: {e}")
-        return "⚠️ Виникла системна помилка (API). Спробуйте пізніше."
+        return " Виникла системна помилка (API). Спробуйте пізніше."
     except asyncio.TimeoutError:
-        return "⏱️ Час очікування відповіді від AI вичерпано. Спробуйте скоротити запит."
+        return " Час очікування відповіді від AI вичерпано. Спробуйте скоротити запит."
 
 
 # --- 1. Обробник /start, /help та Звіт Про Стан ---
