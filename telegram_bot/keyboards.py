@@ -1,6 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
-# --- 1. NEW: Initial Difficulty Choice Keyboard (Початковий вибір) ---
+# --- 1. НОВЕ: Початкове меню вибору складності ---
 DIFFICULTY_CHOICE = ReplyKeyboardMarkup(
     keyboard=[
         [
@@ -12,7 +12,7 @@ DIFFICULTY_CHOICE = ReplyKeyboardMarkup(
     input_field_placeholder="J.A.R.V.I.S., оберіть тип завдання..."
 )
 
-# --- 2. EXISTING (RENAMED): Code Menu for Complex Tasks (Меню для коду) ---
+# --- 2. ІСНУЮЧЕ (ПЕРЕЙМЕНОВАНО): Меню для складних завдань (Код) ---
 CODE_MENU = ReplyKeyboardMarkup(
     keyboard=[
         [
@@ -28,7 +28,7 @@ CODE_MENU = ReplyKeyboardMarkup(
     input_field_placeholder="J.A.R.V.I.S., оберіть функцію..."
 )
 
-# --- Inline Keyboards (Для підтвердження) ---
+# --- Вбудовані клавіатури (Для підтвердження дії) ---
 def get_confirm_keyboard(action: str) -> InlineKeyboardMarkup:
     """Генерує клавіатуру підтвердження для Code Review або Explain."""
     return InlineKeyboardMarkup(
