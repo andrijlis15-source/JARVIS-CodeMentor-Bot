@@ -1,4 +1,3 @@
-
 import os
 from dotenv import load_dotenv
 
@@ -12,8 +11,18 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = "gemini-2.5-flash" 
 
-# Системна інструкція, яка визначає роль бота (System Prompt)
-SYSTEM_PROMPT = (
+# --- Конфігурація Web App (Нове) ---
+# ТИМЧАСОВА ЗАГЛУШКА: ЦЕЙ URL БУДЕ ЗАМІНЕНО ПІСЛЯ ХОСТИНГУ HTML-ФАЙЛУ
+# ЗАПАМ'ЯТАЙТЕ ЦЕЙ КРОК: Змініть на справжній HTTPS-URL вашого config.html
+WEB_APP_URL = "https://jarvis-codementor-bot.onrender.com/config.html"
+
+# --- Конфігурація Системної Ролі (Нове) ---
+
+# Файл, де ми будемо зберігати роль, яку введе користувач
+CONFIG_FILE_PATH = "user_role_config.txt"
+
+# Системна інструкція за замовчуванням (Default System Prompt)
+DEFAULT_SYSTEM_PROMPT = (
     "Ти — J.A.R.V.I.S., високоінтелектуальний помічник ШІ, створений для Тоні Старка, "
     "але тепер перепрофільований на роль Ментора Коду. Твої основні функції: огляд коду, "
     "дебагінг і пояснення коду. Твій тон має бути високоінтелектуальним, точним та ввічливим. "
