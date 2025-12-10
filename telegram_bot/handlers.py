@@ -1,28 +1,61 @@
-
 import asyncio
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo # ДОДАНО: WebAppInfo
 from aiogram.fsm.context import FSMContext
 from google import genai
 from google.genai.errors import APIError
-from aiogram.fsm.state import State 
+from aiogram.fsm.state import State
+import json # ДОДАНО: для роботи з даними Web App
+import os # ДОДАНО: для роботи з файлами
 
-from .config import GEMINI_API_KEY, GEMINI_MODEL, SYSTEM_PROMPT
+# Змінено імпорт: тепер імпортуємо всі змінні
+from . import config 
 from .states import JarvisStates
-from .keyboards import DIFFICULTY_CHOICE, CODE_MENU, get_confirm_keyboard # Оновлено!
+from .keyboards import DIFFICULTY_CHOICE, CODE_MENU, get_confirm_keyboard
 
 router = Router()
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=config.GEMINI_API_KEY)
+
+# --- НОВЕ: Логіка Збереження/Завантаження Ролі ---
+
+def load_user_roles():
+    """Завантажує ролі користувачів із файлу конфігурації."""
+    if os.path.exists(config.CONFIG_FILE_PATH):
+        with open(config.CONFIG_FILE_PATH, 'r') as f:
+            try:
+                # Зчитуємо дані з файлу user_role_config.txt
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}
+    return {}
+
+def save_user_roles(roles):
+    """Зберігає ролі користувачів у файл конфігурації."""
+    # Записуємо дані у файл user_role_config.txt
+    with open(config.CONFIG_FILE_PATH, 'w') as f:
+        json.dump(roles, f, indent=4)
+
+# Завантажуємо ролі один раз при старті
+USER_ROLES = load_user_roles()
+
+# --- Кінець Логіки Збереження Ролі ---
 
 
-async def generate_response(prompt: str) -> str:
-    """Функція для взаємодії з Gemini API"""
+# Змінено: Додано user_id для динамічного вибору системного промпту
+async def generate_response(prompt: str, user_id: int) -> str:
+    """Функція для взаємодії з Gemini API з динамічним System Prompt"""
+    
+    # НОВЕ: Отримання ролі користувача з нашого словника, або використання DEFAULT
+    user_id_str = str(user_id)
+    system_prompt = USER_ROLES.get(user_id_str, config.DEFAULT_SYSTEM_PROMPT)
+
     try:
         response_task = asyncio.to_thread(
             client.models.generate_content,
-            model=GEMINI_MODEL,
-            contents=[SYSTEM_PROMPT, prompt],
+            model=config.GEMINI_MODEL,
+            # Змінено: використовуємо динамічний system_prompt
+            contents=[system_prompt, prompt], 
         )
         response = await asyncio.wait_for(response_task, timeout=30.0)
         return response.text
@@ -36,12 +69,58 @@ async def generate_response(prompt: str) -> str:
 # --- 1. Обробник /start, /help та Звіт Про Стан ---
 @router.message(F.text.in_({"/start", "/help", "Звіт Про Стан (Допомога)"}))
 async def cmd_start_help(message: Message, state: FSMContext):
-    await state.clear() 
+    await state.clear()
+    
+    # НОВЕ: Додаємо кнопку "Налаштування" до start
+    # URL береться з config.py, який ви оновили на GitHub
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⚙️ Налаштувати Роль", web_app=WebAppInfo(url=config.WEB_APP_URL))]
+    ])
+
     await message.answer(
         "Вітаю. Я J.A.R.V.I.S., ваш відданий помічник. \n\n"
         "Оберіть тип завдання, яке ви хочете виконати:",
-        reply_markup=DIFFICULTY_CHOICE # Виводимо нове меню
+        reply_markup=DIFFICULTY_CHOICE, # Виводимо нове меню
     )
+    # Відправляємо окремим повідомленням для Inline-кнопки
+    await message.answer("Або налаштуйте мої інструкції:", reply_markup=keyboard) 
+
+
+# --- НОВЕ: Обробник для команди /settings (окрема команда, якщо потрібно) ---
+@router.message(F.text == "/settings")
+async def cmd_settings(message: Message):
+    web_app_info = WebAppInfo(url=config.WEB_APP_URL)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Налаштувати Роль J.A.R.V.I.S.", web_app=web_app_info)]
+    ])
+    
+    await message.answer(
+        "Натисніть кнопку, щоб відкрити форму налаштування системної ролі:", 
+        reply_markup=keyboard
+    )
+
+# --- НОВЕ: Обробник для даних, які приходять з Web App ---
+@router.message(F.web_app_data)
+async def handle_web_app_data(message: Message):
+    try:
+        # message.web_app_data.data містить JSON рядок, розпарсимо його
+        data = json.loads(message.web_app_data.data)
+        new_role = data.get('role', '').strip()
+        user_id = str(message.from_user.id) # ID користувача як ключ
+        
+        if new_role:
+            # Зберігаємо нову роль у словник та файл
+            USER_ROLES[user_id] = new_role
+            save_user_roles(USER_ROLES)
+            
+            await message.answer(
+                f"✅ Успіх! Нова системна роль для J.A.R.V.I.S. встановлена: **{new_role[:50]}...**"
+            )
+        else:
+            await message.answer("Помилка: Не отримано нову роль.")
+            
+    except Exception as e:
+        await message.answer(f"Виникла помилка при обробці даних: {e}")
 
 # --- 2. НОВИЙ: Перехід до меню складних завдань ---
 @router.message(F.text == "Складне завдання (Код, Дебагінг)")
@@ -64,13 +143,15 @@ async def cmd_start_simple_question(message: Message, state: FSMContext):
 @router.message(JarvisStates.waiting_for_simple_question)
 async def process_simple_question(message: Message, state: FSMContext):
     user_query = message.text
+    user_id = message.from_user.id # Отримуємо ID користувача
     
     prompt = f"Ти — J.A.R.V.I.S. Дай точну, лаконічну та вичерпну відповідь українською мовою на наступне загальне питання: '{user_query}'"
     
     await message.answer(" Аналізую ваше питання. Зачекайте...")
     
-    ai_response = await generate_response(prompt)
-    await message.answer(ai_response, reply_markup=DIFFICULTY_CHOICE) # Повертаємось до вибору складності
+    # Змінено: передаємо user_id до generate_response
+    ai_response = await generate_response(prompt, user_id) 
+    await message.answer(ai_response, reply_markup=DIFFICULTY_CHOICE) 
     
     await state.clear()
 
@@ -93,13 +174,15 @@ async def process_debug_description(message: Message, state: FSMContext):
     data = await state.get_data()
     code = data.get("code")
     description = message.text
+    user_id = message.from_user.id # Отримуємо ID користувача
     
     prompt = f"Як J.A.R.V.I.S., виконай дебагінг наступного коду. Точний опис помилки: '{description}'. Код:\n\n```\n{code}\n```"
     
     await message.answer(" Аналізую структуру та опис несправності. Зачекайте...")
     
-    ai_response = await generate_response(prompt)
-    await message.answer(ai_response, reply_markup=DIFFICULTY_CHOICE) # Повертаємось до вибору складності
+    # Змінено: передаємо user_id до generate_response
+    ai_response = await generate_response(prompt, user_id) 
+    await message.answer(ai_response, reply_markup=DIFFICULTY_CHOICE) 
     
     await state.clear() 
 
@@ -115,7 +198,7 @@ async def cmd_start_single_step_action(message: Message, state: FSMContext):
     else:
         await state.set_state(JarvisStates.waiting_for_explain_code)
         instruction = "Надішліть код, який потрібно пояснити (Deconstruct Logic)."
-                   
+                      
     await message.answer(f" {instruction}")
 
 
@@ -143,6 +226,7 @@ async def cb_confirm_action(callback: CallbackQuery, state: FSMContext):
     action = callback.data.split('_')[1]
     data = await state.get_data()
     code = data.get("code")
+    user_id = callback.from_user.id # Отримуємо ID користувача з callback
     
     if not code:
         await callback.message.edit_text("Помилка: Код не знайдено.", reply_markup=DIFFICULTY_CHOICE)
@@ -158,7 +242,8 @@ async def cb_confirm_action(callback: CallbackQuery, state: FSMContext):
     elif action == "explain":
         prompt = f"Поясни наступний код простою та зрозумілою українською мовою, розбираючи логіку покроково. Код:\n\n```\n{code}\n```"
     
-    ai_response = await generate_response(prompt)
-    await callback.message.edit_text(f" Результат {action.upper()}:\n\n{ai_response}", reply_markup=DIFFICULTY_CHOICE) # Повертаємось до вибору складності
+    # Змінено: передаємо user_id до generate_response
+    ai_response = await generate_response(prompt, user_id) 
+    await callback.message.edit_text(f" Результат {action.upper()}:\n\n{ai_response}", reply_markup=DIFFICULTY_CHOICE) 
     
     await state.clear()
