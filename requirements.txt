@@ -1,0 +1,4 @@
+# telegram_bot/requirements.txt
+aiogram>=3.5            # Основна бібліотека для роботи з Telegram API
+google-genai>=0.1.0     # Python SDK для взаємодії з Gemini
+python-dotenv           # Для читання змінних з файлу .env
